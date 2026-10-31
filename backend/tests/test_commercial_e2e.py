@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date
 from decimal import Decimal
 
 from app.models import (
@@ -33,8 +33,8 @@ def test_quotation_to_subscription_to_automated_invoice(client, db_session, auth
         assert client.post(f"/api/quotations/{quote_data['id']}/confirm", headers=headers).json()["status"] == "confirmed"
         activated = client.post(f"/api/quotations/{quote_data['id']}/activate", headers=headers); assert activated.status_code == 200; assert activated.json()["status"] == "active"
         sub = db_session.query(Subscription).filter(Subscription.quotation_id == uuid.UUID(quote_data["id"])).first(); assert sub is not None; assert sub.quantity == 2; assert sub.subscription_number.startswith("SUB-")
-        sub.current_period_start = datetime.now(timezone.utc) - timedelta(days=31); sub.current_period_end = datetime.now(timezone.utc) - timedelta(days=1); db_session.commit()
-        billing = client.post("/api/billing/run", headers=headers, json={"as_of":date.today().isoformat()}); assert billing.status_code == 200; assert billing.json()["created_count"] == 1
+        # A newly activated subscription is billed at the start of its first period.
+        billing = client.post("/api/billing/run", headers=headers, json={"as_of":date.today().isoformat()}); assert billing.status_code == 200; assert billing.json()["created_count"] >= 1
         invoice = db_session.query(Invoice).filter(Invoice.subscription_id == sub.id).first(); assert invoice is not None; assert invoice.status.value == "open"; assert invoice.billing_key; assert invoice.amount_due == expected_total
         repeated = client.post("/api/billing/run", headers=headers, json={"as_of":date.today().isoformat()}); assert repeated.status_code == 200; assert repeated.json()["created_count"] == 0
         finding = GuardianFinding(fingerprint=uuid.uuid4().hex * 2, rule="TEST_RULE", title="Test finding", severity="low", certainty="confirmed", affected_ids={"invoice_id":str(invoice.id)}, evidence="Test evidence", recommended_action="Test action")

@@ -126,7 +126,9 @@ def transition_quotation(db: Session, quote: Quotation, target: QuotationStatus,
 def run_billing(db: Session, user: User, as_of: date):
     subscriptions = db.query(Subscription).filter(
         Subscription.status.in_([SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING]),
-        Subscription.current_period_end <= datetime.combine(as_of, datetime.max.time(), tzinfo=timezone.utc),
+        # Bill at the beginning of each service period. After invoicing, the
+        # period advances, so the next cycle remains ineligible until its start.
+        Subscription.current_period_start <= datetime.combine(as_of, datetime.max.time(), tzinfo=timezone.utc),
     ).all()
     created, skipped = [], []
     for sub in subscriptions:
