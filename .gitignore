@@ -9,6 +9,8 @@ __pycache__/
 venv/
 .venv/
 .pytest_cache/
+storage/
+backend/storage/
 
 # Node
 node_modules/

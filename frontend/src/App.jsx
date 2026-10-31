@@ -1,122 +1,300 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
+const routes = { '/': 'login', '/login': 'login', '/register': 'register', '/forgot-password': 'forgot', '/reset-password': 'reset', '/app': 'app', '/app/dashboard': 'dashboard', '/app/catalog': 'catalog', '/app/customers': 'customers', '/app/quotations': 'quotations', '/app/subscriptions': 'subscriptions', '/app/invoices': 'invoices', '/app/rules': 'rules', '/app/guardian': 'guardian', '/app/diagnostics': 'diagnostics' }
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function Icon({ name, size = 18 }) {
+  const paths = {
+    arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
+    check: <path d="m5 12 4 4L19 6" />,
+    eye: <><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></>,
+    lock: <><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
+    mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
+    shield: <path d="M12 3 5 6v5c0 4.5 2.8 8.1 7 10 4.2-1.9 7-5.5 7-10V6l-7-3Z" />,
+    user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
+  }
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-export default App
+function navigate(path) {
+  window.history.pushState({}, '', path)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+const diagnosticSession = { active: false, startedAt: null, entries: [] }
+const notifyDiagnosticChange = () => window.dispatchEvent(new CustomEvent('subscript-diagnostic-change'))
+const beginDiagnosticRecording = () => { diagnosticSession.active = true; diagnosticSession.startedAt = new Date().toISOString(); diagnosticSession.entries = []; notifyDiagnosticChange() }
+const stopDiagnosticRecording = () => { diagnosticSession.active = false; notifyDiagnosticChange(); return diagnosticSession.entries }
+const clearDiagnosticRecording = () => { diagnosticSession.active = false; diagnosticSession.startedAt = null; diagnosticSession.entries = []; notifyDiagnosticChange() }
+const diagnosticSnapshot = () => ({ active: diagnosticSession.active, startedAt: diagnosticSession.startedAt, count: diagnosticSession.entries.length })
+const diagnosticHar = () => ({ log: { version: '1.2', creator: { name: 'SubscriptHQ consent recorder', version: '1.0' }, pages: [{ startedDateTime: diagnosticSession.startedAt, id: 'subscript-session', title: 'Consent-based SubscriptHQ diagnostic session', pageTimings: {} }], entries: diagnosticSession.entries } })
+
+function recordDiagnosticEntry(path, options, response, startedAt, duration, networkError = false) {
+  if (!diagnosticSession.active || path.startsWith('/api/har')) return
+  if (Date.now() - new Date(diagnosticSession.startedAt).getTime() >= 300000) { stopDiagnosticRecording(); return }
+  const headers = Object.entries(options.headers || {}).map(([name, value]) => ({ name, value: name.toLowerCase() === 'authorization' ? '[REDACTED]' : String(value) }))
+  diagnosticSession.entries.push({
+    pageref: 'subscript-session', startedDateTime: startedAt, time: Math.round(duration * 100) / 100,
+    request: { method: options.method || 'GET', url: `${API_BASE_URL}${path}`, httpVersion: 'HTTP/1.1', headers, queryString: [], cookies: [], headersSize: -1, bodySize: -1 },
+    response: { status: networkError ? 0 : response.status, statusText: networkError ? 'Network Error' : response.statusText, httpVersion: 'HTTP/1.1', headers: [], cookies: [], content: { size: Number(response?.headers?.get('content-length') || 0), mimeType: response?.headers?.get('content-type') || '' }, redirectURL: '', headersSize: -1, bodySize: -1 },
+    cache: {}, timings: { send: 0, wait: Math.round(duration * 100) / 100, receive: 0 },
+  })
+  notifyDiagnosticChange()
+}
+
+async function api(path, options = {}) {
+  const requestOptions = { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } }
+  const startedAt = new Date().toISOString(); const started = performance.now(); let response
+  try { response = await fetch(`${API_BASE_URL}${path}`, requestOptions); recordDiagnosticEntry(path, requestOptions, response, startedAt, performance.now() - started) } catch (requestError) { recordDiagnosticEntry(path, requestOptions, null, startedAt, performance.now() - started, true); throw requestError }
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const validation = Array.isArray(body.detail) ? body.detail.map((item) => item.msg).join(' ') : body.detail
+    throw new Error(validation || 'Something went wrong. Please try again.')
+  }
+  return body
+}
+
+function Brand() {
+  return <button className="brand" type="button" onClick={() => navigate('/login')} aria-label="SubscriptHQ home"><span className="brand-mark"><span /></span><span>Subscript<span>HQ</span></span></button>
+}
+
+function AuthLayout({ eyebrow, title, description, children, quote }) {
+  return <main className="auth-shell">
+    <section className="auth-story">
+      <div className="story-top"><Brand /><span className="prototype-pill">Prototype</span></div>
+      <div className="story-content"><p className="kicker">Subscription operations, refined.</p><h1>One calm place for every recurring relationship.</h1><p className="story-copy">Plans, billing, payments and revenue health—designed for teams that want clarity without the clutter.</p><div className="assurance-row"><span><Icon name="shield" /> Role-secure</span><span><Icon name="check" /> Audit-ready</span></div></div>
+      <blockquote>“{quote || 'The details stay precise, so the business can move with confidence.'}”<span>SubscriptHQ operating principle</span></blockquote>
+    </section>
+    <section className="auth-panel"><div className="mobile-brand"><Brand /></div><div className="form-wrap"><p className="eyebrow">{eyebrow}</p><h2>{title}</h2><p className="form-description">{description}</p>{children}</div><p className="legal">Protected by encrypted authentication. No OpenAI service is used.</p></section>
+  </main>
+}
+
+function Field({ label, icon, type = 'text', value, onChange, autoComplete, placeholder }) {
+  const [visible, setVisible] = useState(false)
+  const password = type === 'password'
+  return <label className="field"><span>{label}</span><span className="input-wrap"><Icon name={icon} /><input type={password && visible ? 'text' : type} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} placeholder={placeholder} required />{password && <button className="field-action" type="button" onClick={() => setVisible((current) => !current)} aria-label={visible ? 'Hide password' : 'Show password'}><Icon name="eye" /></button>}</span></label>
+}
+
+function Notice({ kind = 'error', children }) { return children ? <div className={`notice ${kind}`} role="status">{children}</div> : null }
+function SubmitButton({ busy, disabled, children }) { return <button className="primary-button" disabled={busy || disabled}>{busy ? 'Please wait…' : children}<Icon name="arrow" /></button> }
+
+function Login({ onAuthenticated }) {
+  const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [portal, setPortal] = useState('customer'); const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
+  const portalDetails = { admin: ['Administrator', 'Full business control'], staff: ['Staff', 'Daily operations'], customer: ['Customer', 'My subscriptions'] }
+  async function submit(event) { event.preventDefault(); setError(''); setBusy(true); try { const result = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }); if (result.user.role !== portal) throw new Error(`This account is registered as ${result.user.role}. Choose the ${result.user.role} portal to continue.`); sessionStorage.setItem('subscript_token', result.access_token); onAuthenticated(result.user); navigate(portal === 'customer' ? '/app/subscriptions' : '/app/dashboard') } catch (requestError) { sessionStorage.removeItem('subscript_token'); setError(requestError.message) } finally { setBusy(false) } }
+  return <AuthLayout eyebrow="Welcome back" title="Sign in to your workspace" description="Choose your access type, then enter your secure account details."><form onSubmit={submit}><fieldset className="portal-selector"><legend>Choose your portal</legend>{Object.entries(portalDetails).map(([role, [label, description]]) => <button type="button" className={portal === role ? 'active' : ''} aria-pressed={portal === role} onClick={() => { setPortal(role); setError('') }} key={role}><span className="portal-icon"><Icon name={role === 'customer' ? 'user' : 'shield'} size={16} /></span><span><strong>{label}</strong><small>{description}</small></span><i /></button>)}</fieldset><Field label="Email address" icon="mail" type="email" value={email} onChange={setEmail} autoComplete="email" placeholder="you@company.com" /><Field label="Password" icon="lock" type="password" value={password} onChange={setPassword} autoComplete="current-password" placeholder="Enter your password" /><div className="form-link-row"><span /><button type="button" className="text-link" onClick={() => navigate('/forgot-password')}>Forgot password?</button></div><Notice>{error}</Notice><SubmitButton busy={busy}>Enter {portalDetails[portal][0]} portal</SubmitButton></form><p className="switch-copy">New customer? <button className="text-link" onClick={() => navigate('/register')}>Create an account</button></p></AuthLayout>
+}
+
+function Register() {
+  const [form, setForm] = useState({ full_name: '', email: '', password: '' }); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const set = (key) => (value) => setForm((current) => ({ ...current, [key]: value }))
+  async function submit(event) { event.preventDefault(); setError(''); setBusy(true); try { await api('/api/auth/register', { method: 'POST', body: JSON.stringify(form) }); navigate('/login?registered=1') } catch (requestError) { setError(requestError.message) } finally { setBusy(false) } }
+  return <AuthLayout eyebrow="Customer access" title="Create your account" description="Set up secure access to your subscriptions and invoices." quote="Every customer should understand exactly what they have, owe and receive."><form onSubmit={submit}><Field label="Full name" icon="user" value={form.full_name} onChange={set('full_name')} autoComplete="name" placeholder="Your full name" /><Field label="Email address" icon="mail" type="email" value={form.email} onChange={set('email')} autoComplete="email" placeholder="you@company.com" /><Field label="Password" icon="lock" type="password" value={form.password} onChange={set('password')} autoComplete="new-password" placeholder="Create a strong password" /><p className="password-hint">More than 8 characters, with uppercase, lowercase and a special character.</p><Notice>{error}</Notice><SubmitButton busy={busy}>Create account</SubmitButton></form><p className="switch-copy">Already registered? <button className="text-link" onClick={() => navigate('/login')}>Sign in</button></p></AuthLayout>
+}
+
+function ForgotPassword() {
+  const [email, setEmail] = useState(''); const [message, setMessage] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
+  async function submit(event) { event.preventDefault(); setError(''); setMessage(''); setBusy(true); try { const result = await api('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }); setMessage(result.message) } catch (requestError) { setError(requestError.message) } finally { setBusy(false) } }
+  return <AuthLayout eyebrow="Account recovery" title="Reset your password" description="We’ll email a private, time-limited reset link to your registered address."><form onSubmit={submit}><Field label="Email address" icon="mail" type="email" value={email} onChange={setEmail} autoComplete="email" placeholder="you@company.com" /><Notice>{error}</Notice><Notice kind="success">{message}</Notice><SubmitButton busy={busy}>Send reset link</SubmitButton></form><p className="switch-copy"><button className="text-link" onClick={() => navigate('/login')}>Back to sign in</button></p></AuthLayout>
+}
+
+function ResetPassword() {
+  const token = useMemo(() => new URLSearchParams(window.location.search).get('token') || '', []); const [password, setPassword] = useState(''); const [message, setMessage] = useState(''); const [error, setError] = useState(token ? '' : 'This reset link is missing its security token.'); const [busy, setBusy] = useState(false)
+  async function submit(event) { event.preventDefault(); setError(''); setBusy(true); try { const result = await api('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }); setMessage(result.message) } catch (requestError) { setError(requestError.message) } finally { setBusy(false) } }
+  return <AuthLayout eyebrow="Secure reset" title="Choose a new password" description="Your reset link can be used once and expires automatically."><form onSubmit={submit}><Field label="New password" icon="lock" type="password" value={password} onChange={setPassword} autoComplete="new-password" placeholder="Enter a new password" /><p className="password-hint">More than 8 characters, with uppercase, lowercase and a special character.</p><Notice>{error}</Notice><Notice kind="success">{message}</Notice><SubmitButton busy={busy} disabled={!token}>Update password</SubmitButton></form>{message && <p className="switch-copy"><button className="text-link" onClick={() => navigate('/login')}>Continue to sign in</button></p>}</AuthLayout>
+}
+
+const modules = [['Subscriptions', 'Manage lifecycle, renewals and plan changes.'], ['Invoices', 'Review billing, balances and payment status.'], ['Revenue Guardian', 'Surface billing risks with clear evidence.'], ['HAR diagnostics', 'Submit a sanitized developer report for support.']]
+
+function RecordingBadge() {
+  const [snapshot, setSnapshot] = useState(diagnosticSnapshot())
+  useEffect(() => { const update = () => setSnapshot(diagnosticSnapshot()); window.addEventListener('subscript-diagnostic-change', update); return () => window.removeEventListener('subscript-diagnostic-change', update) }, [])
+  if (!snapshot.active) return null
+  return <button className="sidebar-recording" onClick={() => navigate('/app/diagnostics')}><span />Recording diagnostics <strong>{snapshot.count}</strong></button>
+}
+
+function Sidebar({ user, onSignOut, active = 'overview' }) {
+  const staff = user?.role === 'admin' || user?.role === 'staff'
+  return <aside className="sidebar">
+    <Brand />
+    <RecordingBadge />
+    <nav aria-label="Primary navigation">
+      <span className="nav-label">Workspace</span>
+      <button className={`nav-item ${active === 'overview' ? 'active' : ''}`} onClick={() => navigate('/app')}><span className="nav-dot" />Overview</button>
+      {staff && <button className={`nav-item ${active === 'dashboard' ? 'active' : ''}`} onClick={() => navigate('/app/dashboard')}>Dashboard & reports</button>}
+      <button className={`nav-item ${active === 'catalog' ? 'active' : ''}`} onClick={() => navigate('/app/catalog')}>{user?.role === 'customer' ? 'Plans' : 'Products & plans'}</button>
+      {staff && <button className={`nav-item ${active === 'customers' ? 'active' : ''}`} onClick={() => navigate('/app/customers')}>Customers</button>}
+      <button className={`nav-item ${active === 'quotations' ? 'active' : ''}`} onClick={() => navigate('/app/quotations')}>Quotations</button>
+      <button className={`nav-item ${active === 'subscriptions' ? 'active' : ''}`} onClick={() => navigate('/app/subscriptions')}>Subscriptions</button>
+      <button className={`nav-item ${active === 'invoices' ? 'active' : ''}`} onClick={() => navigate('/app/invoices')}>Invoices & payments</button>
+      <span className="nav-label">Intelligence</span>
+      {user?.role === 'admin' && <button className={`nav-item ${active === 'rules' ? 'active' : ''}`} onClick={() => navigate('/app/rules')}>Taxes & discounts</button>}
+      {staff && <button className={`nav-item ${active === 'guardian' ? 'active' : ''}`} onClick={() => navigate('/app/guardian')}>Revenue Guardian</button>}
+      <button className={`nav-item ${active === 'diagnostics' ? 'active' : ''}`} onClick={() => navigate('/app/diagnostics')}>{user?.role === 'customer' ? 'Report a problem' : 'Developer HAR queue'}</button>
+    </nav>
+    <button className="profile-button" onClick={onSignOut}><span className="avatar">{(user?.full_name || 'U').slice(0, 1).toUpperCase()}</span><span><strong>{user?.full_name || 'Workspace user'}</strong><small>Sign out</small></span></button>
+  </aside>
+}
+
+function Workspace({ user, onSignOut }) {
+  return <main className="workspace"><Sidebar user={user} onSignOut={onSignOut} /><section className="workspace-content"><header><div><p className="eyebrow">Prototype workspace</p><h1>Good to see you, {(user?.full_name || 'there').split(' ')[0]}.</h1></div><span className="role-chip">{user?.role || 'customer'}</span></header><div className="welcome-card"><div><p className="kicker">Your subscription desk</p><h2>Clarity across every recurring relationship.</h2><p>Products, quotations, recurring billing, manual payments and revenue monitoring are connected in one workspace.</p></div><div className="orb"><span>HQ</span></div></div><div className="section-heading"><div><p className="eyebrow">Core modules</p><h2>Built for the full billing lifecycle</h2></div></div><div className="module-grid">{modules.map(([title, description], index) => <article className="module-card" key={title}><span className="module-index">0{index + 1}</span><h3>{title}</h3><p>{description}</p><span className="module-state"><span />{title === 'Developer diagnostics' ? 'Next milestone' : 'Ready'}</span></article>)}</div></section></main>
+}
+
+const emptyProduct = { name: '', code: '', product_type: 'software', sales_price: '', cost_price: '', notes: '', variants: [{ attribute_name: '', value: '', sku: '', price_modifier: '0.00' }] }
+const emptyPlan = { product_id: '', name: '', code: '', billing_interval: 'monthly', interval_count: 1, price: '', currency: 'USD', minimum_quantity: 1, available_from: '', available_until: '', payment_terms_days: 0, auto_close_on_end: false, allow_early_close: true, allow_pause: true, allow_renewal: true }
+
+function SmallField({ label, children }) { return <label className="small-field"><span>{label}</span>{children}</label> }
+
+function CatalogWorkspace({ user, onSignOut }) {
+  const [products, setProducts] = useState([]); const [plans, setPlans] = useState([]); const [tab, setTab] = useState('products'); const [panel, setPanel] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [productForm, setProductForm] = useState(emptyProduct); const [planForm, setPlanForm] = useState(emptyPlan)
+  const canManage = user?.role === 'admin' || user?.role === 'staff'
+  const token = sessionStorage.getItem('subscript_token')
+  const authorized = (options = {}) => ({ ...options, headers: { Authorization: `Bearer ${token}`, ...options.headers } })
+  const loadCatalog = async () => { if (!token) return; try { const [productResult, planResult] = await Promise.all([api('/api/products?page_size=100', authorized()), api('/api/plans?page_size=100', authorized())]); setProducts(productResult.items); setPlans(planResult.items) } catch (requestError) { setError(requestError.message) } }
+  useEffect(() => {
+    if (!token) return undefined
+    let cancelled = false
+    const headers = { Authorization: `Bearer ${token}` }
+    Promise.all([
+      api('/api/products?page_size=100', { headers }),
+      api('/api/plans?page_size=100', { headers }),
+    ]).then(([productResult, planResult]) => {
+      if (!cancelled) { setProducts(productResult.items); setPlans(planResult.items) }
+    }).catch((requestError) => { if (!cancelled) setError(requestError.message) })
+    return () => { cancelled = true }
+  }, [token])
+  const setProduct = (key) => (event) => setProductForm((current) => ({ ...current, [key]: event.target.value }))
+  const setPlan = (key) => (event) => setPlanForm((current) => ({ ...current, [key]: event.target.type === 'checkbox' ? event.target.checked : event.target.value }))
+  const setVariant = (index, key, value) => setProductForm((current) => ({ ...current, variants: current.variants.map((variant, variantIndex) => variantIndex === index ? { ...variant, [key]: value } : variant) }))
+
+  async function createProduct(event) {
+    event.preventDefault(); setBusy(true); setError('')
+    const payload = { ...productForm, sales_price: productForm.sales_price || '0.00', cost_price: productForm.cost_price || '0.00', variants: productForm.variants.filter((variant) => variant.attribute_name && variant.value) }
+    try { await api('/api/products', authorized({ method: 'POST', body: JSON.stringify(payload) })); setProductForm(emptyProduct); setPanel(''); await loadCatalog() } catch (requestError) { setError(requestError.message) } finally { setBusy(false) }
+  }
+
+  async function createPlan(event) {
+    event.preventDefault(); setBusy(true); setError('')
+    const payload = { ...planForm, interval_count: Number(planForm.interval_count), price: planForm.price, minimum_quantity: Number(planForm.minimum_quantity), payment_terms_days: Number(planForm.payment_terms_days), available_from: planForm.available_from || null, available_until: planForm.available_until || null }
+    try { await api('/api/plans', authorized({ method: 'POST', body: JSON.stringify(payload) })); setPlanForm(emptyPlan); setPanel(''); await loadCatalog() } catch (requestError) { setError(requestError.message) } finally { setBusy(false) }
+  }
+
+  return <main className="workspace"><Sidebar user={user} onSignOut={onSignOut} active="catalog" /><section className="workspace-content catalog-content">
+    <header><div><p className="eyebrow">Commercial catalog</p><h1>{user?.role === 'customer' ? 'Available plans' : 'Products & plans'}</h1><p className="page-subtitle">Structured pricing, flexible variants and clear billing rules.</p></div>{canManage && <button className="catalog-primary" onClick={() => setPanel(tab === 'products' ? 'product' : 'plan')}>+ New {tab === 'products' ? 'product' : 'plan'}</button>}</header>
+    <Notice>{error}</Notice>
+    <div className="catalog-tabs"><button className={tab === 'products' ? 'active' : ''} onClick={() => setTab('products')}>Products <span>{products.length}</span></button><button className={tab === 'plans' ? 'active' : ''} onClick={() => setTab('plans')}>Plans <span>{plans.length}</span></button></div>
+    {tab === 'products' ? <div className="catalog-table"><div className="catalog-row catalog-head"><span>Product</span><span>Type</span><span>Base price</span><span>Variants</span><span>Status</span></div>{products.length === 0 ? <p className="empty-state">No products yet.</p> : products.map((product) => <div className="catalog-row" key={product.id}><span><strong>{product.name}</strong><small>{product.code}</small></span><span className="capitalize">{product.product_type}</span><span>{product.currency || 'USD'} {product.sales_price}</span><span>{product.variants?.filter((variant) => variant.is_active).length || 0}</span><span><i className={`status-dot ${product.is_active ? '' : 'muted'}`} />{product.is_active ? 'Active' : 'Inactive'}</span></div>)}</div> : <div className="plan-grid">{plans.length === 0 ? <p className="empty-state">No plans yet.</p> : plans.map((plan) => <article className="plan-card" key={plan.id}><div className="plan-card-top"><span>{plan.billing_interval}</span><small>{plan.code}</small></div><h3>{plan.name}</h3><p className="plan-price"><strong>{plan.currency} {plan.price}</strong><span> / {plan.interval_count > 1 ? `${plan.interval_count} ` : ''}{plan.billing_interval}</span></p><div className="plan-rules"><span>Minimum {plan.minimum_quantity}</span><span>{plan.payment_terms_days} day terms</span><span>{plan.allow_pause ? 'Pause allowed' : 'No pauses'}</span></div></article>)}</div>}
+    {panel && <div className="drawer-backdrop" onMouseDown={() => setPanel('')}><aside className="catalog-drawer" onMouseDown={(event) => event.stopPropagation()}><div className="drawer-title"><div><p className="eyebrow">Catalog setup</p><h2>New {panel}</h2></div><button onClick={() => setPanel('')} aria-label="Close">×</button></div>{panel === 'product' ? <form onSubmit={createProduct} className="catalog-form"><div className="form-grid"><SmallField label="Product name"><input required value={productForm.name} onChange={setProduct('name')} /></SmallField><SmallField label="Code"><input required value={productForm.code} onChange={setProduct('code')} /></SmallField><SmallField label="Product type"><input required value={productForm.product_type} onChange={setProduct('product_type')} /></SmallField><SmallField label="Sales price"><input type="number" min="0" step="0.01" required value={productForm.sales_price} onChange={setProduct('sales_price')} /></SmallField><SmallField label="Cost price"><input type="number" min="0" step="0.01" required value={productForm.cost_price} onChange={setProduct('cost_price')} /></SmallField><SmallField label="Notes"><input value={productForm.notes} onChange={setProduct('notes')} /></SmallField></div><div className="variant-heading"><strong>Variants</strong><button type="button" onClick={() => setProductForm((current) => ({ ...current, variants: [...current.variants, { attribute_name: '', value: '', sku: '', price_modifier: '0.00' }] }))}>+ Add variant</button></div>{productForm.variants.map((variant, index) => <div className="variant-row" key={index}><input placeholder="Attribute (Brand)" value={variant.attribute_name} onChange={(event) => setVariant(index, 'attribute_name', event.target.value)} /><input placeholder="Value (Odoo)" value={variant.value} onChange={(event) => setVariant(index, 'value', event.target.value)} /><input placeholder="SKU" value={variant.sku} onChange={(event) => setVariant(index, 'sku', event.target.value)} /><input type="number" step="0.01" placeholder="Price +/−" value={variant.price_modifier} onChange={(event) => setVariant(index, 'price_modifier', event.target.value)} /></div>)}<button className="catalog-primary full" disabled={busy}>{busy ? 'Saving…' : 'Create product'}</button></form> : <form onSubmit={createPlan} className="catalog-form"><div className="form-grid"><SmallField label="Product"><select required value={planForm.product_id} onChange={setPlan('product_id')}><option value="">Select product</option>{products.map((product) => <option value={product.id} key={product.id}>{product.name}</option>)}</select></SmallField><SmallField label="Plan name"><input required value={planForm.name} onChange={setPlan('name')} /></SmallField><SmallField label="Code"><input required value={planForm.code} onChange={setPlan('code')} /></SmallField><SmallField label="Billing interval"><select value={planForm.billing_interval} onChange={setPlan('billing_interval')}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></SmallField><SmallField label="Interval count"><input type="number" min="1" value={planForm.interval_count} onChange={setPlan('interval_count')} /></SmallField><SmallField label="Price"><input required type="number" min="0" step="0.01" value={planForm.price} onChange={setPlan('price')} /></SmallField><SmallField label="Minimum quantity"><input type="number" min="1" value={planForm.minimum_quantity} onChange={setPlan('minimum_quantity')} /></SmallField><SmallField label="Payment terms (days)"><input type="number" min="0" value={planForm.payment_terms_days} onChange={setPlan('payment_terms_days')} /></SmallField><SmallField label="Available from"><input type="date" value={planForm.available_from} onChange={setPlan('available_from')} /></SmallField><SmallField label="Available until"><input type="date" value={planForm.available_until} onChange={setPlan('available_until')} /></SmallField></div><div className="rule-checks">{[['auto_close_on_end','Close automatically'],['allow_early_close','Allow early closure'],['allow_pause','Allow pause'],['allow_renewal','Allow renewal']].map(([key,label]) => <label key={key}><input type="checkbox" checked={planForm[key]} onChange={setPlan(key)} />{label}</label>)}</div><button className="catalog-primary full" disabled={busy}>{busy ? 'Saving…' : 'Create plan'}</button></form>}</aside></div>}
+  </section></main>
+}
+
+const formatMoney = (currency, value) => `${currency || 'USD'} ${Number(value || 0).toFixed(2)}`
+const formatDate = (value) => value ? new Date(`${value}`.slice(0, 10) + 'T00:00:00').toLocaleDateString() : '—'
+
+function DataTable({ columns, rows, empty = 'Nothing to show yet.' }) {
+  return <div className="ops-table"><div className="ops-row ops-head" style={{ '--columns': columns.map((column) => column.width || '1fr').join(' ') }}>{columns.map((column) => <span key={column.key}>{column.label}</span>)}</div>{rows.length === 0 ? <p className="empty-state">{empty}</p> : rows.map((row) => <div className="ops-row" style={{ '--columns': columns.map((column) => column.width || '1fr').join(' ') }} key={row.id}>{columns.map((column) => <span key={column.key}>{column.render ? column.render(row) : row[column.key]}</span>)}</div>)}</div>
+}
+
+function OperationsWorkspace({ user, onSignOut, view }) {
+  const token = sessionStorage.getItem('subscript_token'); const headers = { Authorization: `Bearer ${token}` }; const staff = user?.role === 'admin' || user?.role === 'staff'
+  const [data, setData] = useState([]); const [aux, setAux] = useState({ customers: [], products: [], plans: [], payments: [] }); const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [busy, setBusy] = useState(false)
+  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', billing_address: '', currency: 'USD' })
+  const [quote, setQuote] = useState({ customer_id: '', plan_id: '', quantity: 1, valid_days: 30, payment_terms_days: 0, notes: '' })
+  const [payment, setPayment] = useState({ invoice_id: '', amount: '', payment_method: 'bank_transfer', transaction_reference: '', note: '' })
+
+  async function load() {
+    if (!token) return
+    setError('')
+    try {
+      if (view === 'customers') { const result = await api('/api/customers?page_size=100', { headers }); setData(result.items) }
+      if (view === 'quotations') {
+        const requests = [api('/api/quotations', { headers })]
+        if (staff) requests.push(api('/api/customers?page_size=100', { headers }), api('/api/products?page_size=100', { headers }), api('/api/plans?page_size=100', { headers }))
+        const [quotes, customers, products, plans] = await Promise.all(requests); setData(quotes); if (staff) setAux((current) => ({ ...current, customers: customers.items, products: products.items, plans: plans.items }))
+      }
+      if (view === 'subscriptions') { const result = await api('/api/subscriptions?page_size=100', { headers }); setData(result.items) }
+      if (view === 'invoices') { const [invoices, payments] = await Promise.all([api('/api/invoices?page_size=100', { headers }), api('/api/payments?page_size=100', { headers })]); setData(invoices.items); setAux((current) => ({ ...current, payments: payments.items })) }
+    } catch (requestError) { setError(requestError.message) }
+  }
+  useEffect(() => { const timer = window.setTimeout(load, 0); return () => window.clearTimeout(timer) }, [view]) // eslint-disable-line react-hooks/exhaustive-deps
+  const act = async (path, body) => { setBusy(true); setError(''); setMessage(''); try { const result = await api(path, { method: 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) }); await load(); return result } catch (requestError) { setError(requestError.message); return null } finally { setBusy(false) } }
+  async function createCustomer(event) { event.preventDefault(); const result = await act('/api/customers', customer); if (result) { setCustomer({ name: '', email: '', phone: '', billing_address: '', currency: 'USD' }); setMessage('Customer created.') } }
+  async function createQuote(event) { event.preventDefault(); const plan = aux.plans.find((item) => item.id === quote.plan_id); if (!plan) return; const payload = { customer_id: quote.customer_id, valid_days: Number(quote.valid_days), payment_terms_days: Number(quote.payment_terms_days), currency: plan.currency, notes: quote.notes || null, lines: [{ product_id: plan.product_id, plan_id: plan.id, description: plan.name, quantity: Number(quote.quantity), unit_price: plan.price }] }; const result = await act('/api/quotations', payload); if (result) { setQuote({ customer_id: '', plan_id: '', quantity: 1, valid_days: 30, payment_terms_days: 0, notes: '' }); setMessage('Draft quotation created.') } }
+  async function recordPayment(event) { event.preventDefault(); const invoice = data.find((item) => item.id === payment.invoice_id); const result = await act(`/api/invoices/${payment.invoice_id}/payments`, { ...payment, amount: payment.amount, currency: invoice?.currency || 'USD', idempotency_key: crypto.randomUUID(), payment_status: 'succeeded', payment_date: new Date().toISOString().slice(0, 10) }); if (result) { setPayment({ invoice_id: '', amount: '', payment_method: 'bank_transfer', transaction_reference: '', note: '' }); setMessage('Manual payment recorded.') } }
+  async function refund(item) { const amount = window.prompt(`Refund amount for ${item.payment_number}`); if (!amount) return; const result = await act(`/api/payments/${item.id}/refund`, { refund_amount: amount, reason: 'Manual refund recorded in workspace' }); if (result) setMessage('Refund recorded.') }
+  async function printable(invoice) { try { const response = await fetch(`${API_BASE_URL}/api/invoices/${invoice.id}/print`, { headers }); if (!response.ok) throw new Error('Could not prepare invoice'); const html = await response.text(); const url = URL.createObjectURL(new Blob([html], { type: 'text/html' })); window.open(url, '_blank', 'noopener,noreferrer'); setTimeout(() => URL.revokeObjectURL(url), 60000) } catch (requestError) { setError(requestError.message) } }
+
+  const titles = { customers: ['Customer directory', 'Customers', 'Create and maintain the people and organisations you bill.'], quotations: ['Sales workflow', 'Quotations', 'Move proposals from draft to active subscriptions.'], subscriptions: ['Recurring relationships', 'Subscriptions', 'Track plan, quantity, renewal period and lifecycle.'], invoices: ['Billing desk', 'Invoices & payments', 'Generate recurring invoices and record manual payments or refunds.'] }
+  const [eyebrow, title, subtitle] = titles[view]
+  let content
+  if (view === 'customers') content = <><form className="quick-form" onSubmit={createCustomer}><SmallField label="Name"><input required value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} /></SmallField><SmallField label="Email"><input required type="email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} /></SmallField><SmallField label="Phone"><input value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} /></SmallField><button className="catalog-primary" disabled={busy}>Add customer</button></form><DataTable columns={[{ key: 'name', label: 'Customer', width: '1.5fr', render: (row) => <><strong>{row.name}</strong><small>{row.email}</small></> }, { key: 'phone', label: 'Phone' }, { key: 'currency', label: 'Currency' }, { key: 'is_active', label: 'Status', render: (row) => row.is_active ? 'Active' : 'Inactive' }]} rows={data} empty="No customers have been added." /></>
+  if (view === 'quotations') content = <>{staff && <form className="quick-form quote-form" onSubmit={createQuote}><SmallField label="Customer"><select required value={quote.customer_id} onChange={(e) => setQuote({ ...quote, customer_id: e.target.value })}><option value="">Select customer</option>{aux.customers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></SmallField><SmallField label="Plan"><select required value={quote.plan_id} onChange={(e) => setQuote({ ...quote, plan_id: e.target.value })}><option value="">Select plan</option>{aux.plans.map((item) => <option key={item.id} value={item.id}>{item.name} · {formatMoney(item.currency, item.price)}</option>)}</select></SmallField><SmallField label="Quantity"><input min="1" type="number" value={quote.quantity} onChange={(e) => setQuote({ ...quote, quantity: e.target.value })} /></SmallField><SmallField label="Valid days"><input min="1" type="number" value={quote.valid_days} onChange={(e) => setQuote({ ...quote, valid_days: e.target.value })} /></SmallField><button className="catalog-primary" disabled={busy}>Create draft</button></form>}<DataTable columns={[{ key: 'quotation_number', label: 'Quotation', width: '1.3fr', render: (row) => <><strong>{row.quotation_number}</strong><small>Valid to {formatDate(row.valid_until)}</small></> }, { key: 'status', label: 'Stage', render: (row) => <span className={`status-badge ${row.status}`}>{row.status}</span> }, { key: 'total_amount', label: 'Total', render: (row) => formatMoney(row.currency, row.total_amount) }, { key: 'actions', label: 'Next action', width: '1.5fr', render: (row) => staff && <div className="row-actions">{row.status === 'draft' && <button disabled={busy} onClick={() => act(`/api/quotations/${row.id}/send`)}>Send</button>}{row.status === 'quotation' && <button disabled={busy} onClick={() => act(`/api/quotations/${row.id}/confirm`)}>Confirm</button>}{row.status === 'confirmed' && <button disabled={busy} onClick={() => act(`/api/quotations/${row.id}/activate`)}>Activate</button>}{['active', 'confirmed'].includes(row.status) && <button disabled={busy} onClick={() => act(`/api/quotations/${row.id}/close`)}>Close</button>}</div> }]} rows={data} empty="No quotations yet." /></>
+  if (view === 'subscriptions') content = <DataTable columns={[{ key: 'subscription_number', label: 'Subscription', width: '1.4fr', render: (row) => <><strong>{row.subscription_number || row.id.slice(0, 8)}</strong><small>Qty {row.quantity}</small></> }, { key: 'status', label: 'Status', render: (row) => <span className={`status-badge ${row.status}`}>{row.status}</span> }, { key: 'current_period_start', label: 'Period starts', render: (row) => formatDate(row.current_period_start) }, { key: 'current_period_end', label: 'Renews / ends', render: (row) => formatDate(row.current_period_end) }]} rows={data} empty="No active subscriptions. Activate a confirmed quotation to create one." />
+  if (view === 'invoices') content = <>{staff && <div className="billing-actions"><button className="catalog-primary" disabled={busy} onClick={async () => { const result = await act('/api/billing/run', { as_of: new Date().toISOString().slice(0, 10) }); if (result) setMessage(`Billing completed: ${result.created} created, ${result.skipped} skipped.`) }}>Run recurring billing</button></div>}<DataTable columns={[{ key: 'invoice_number', label: 'Invoice', width: '1.25fr', render: (row) => <><strong>{row.invoice_number}</strong><small>Due {formatDate(row.due_date)}</small></> }, { key: 'status', label: 'Status', render: (row) => <span className={`status-badge ${row.status}`}>{row.status}</span> }, { key: 'amount_due', label: 'Amount due', render: (row) => formatMoney(row.currency, row.amount_due) }, { key: 'actions', label: 'Actions', width: '1.3fr', render: (row) => <div className="row-actions"><button onClick={() => printable(row)}>Print</button>{staff && row.status !== 'draft' && <button disabled={busy} onClick={async () => { const result = await act(`/api/invoices/${row.id}/send`); if (result) setMessage('Invoice emailed.') }}>Email</button>}</div> }]} rows={data} empty="No invoices yet." />{staff && <><h2 className="subheading">Record a manual payment</h2><form className="quick-form" onSubmit={recordPayment}><SmallField label="Invoice"><select required value={payment.invoice_id} onChange={(e) => setPayment({ ...payment, invoice_id: e.target.value })}><option value="">Select unpaid invoice</option>{data.filter((item) => Number(item.amount_due) > 0).map((item) => <option key={item.id} value={item.id}>{item.invoice_number} · {formatMoney(item.currency, item.amount_due)}</option>)}</select></SmallField><SmallField label="Amount"><input required min="0.01" step="0.01" type="number" value={payment.amount} onChange={(e) => setPayment({ ...payment, amount: e.target.value })} /></SmallField><SmallField label="Reference"><input value={payment.transaction_reference} onChange={(e) => setPayment({ ...payment, transaction_reference: e.target.value })} /></SmallField><button className="catalog-primary" disabled={busy}>Record payment</button></form><h2 className="subheading">Payment history</h2><DataTable columns={[{ key: 'payment_number', label: 'Payment', width: '1.3fr' }, { key: 'status', label: 'Status' }, { key: 'amount', label: 'Amount', render: (row) => formatMoney(row.currency, row.amount) }, { key: 'refunded_amount', label: 'Refunded', render: (row) => formatMoney(row.currency, row.refunded_amount) }, { key: 'action', label: '', render: (row) => row.status === 'succeeded' && Number(row.amount) > Number(row.refunded_amount) && <button className="table-link" onClick={() => refund(row)}>Refund</button> }]} rows={aux.payments} empty="No payments recorded." /></>}</>
+  return <main className="workspace"><Sidebar user={user} onSignOut={onSignOut} active={view} /><section className="workspace-content ops-content"><header><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1><p className="page-subtitle">{subtitle}</p></div><span className="role-chip">{user?.role}</span></header><Notice>{error}</Notice><Notice kind="success">{message}</Notice><div className="ops-body">{content}</div></section></main>
+}
+
+function RulesWorkspace({ user, onSignOut }) {
+  const token = sessionStorage.getItem('subscript_token'); const headers = { Authorization: `Bearer ${token}` }; const [taxes, setTaxes] = useState([]); const [discounts, setDiscounts] = useState([]); const [kind, setKind] = useState('tax'); const [form, setForm] = useState({ name: '', code: '', adjustment_type: 'percentage', value: '', valid_until: '' }); const [error, setError] = useState(''); const [message, setMessage] = useState('')
+  const load = async () => { try { const [taxResult, discountResult] = await Promise.all([api('/api/tax-rules', { headers }), api('/api/discount-rules', { headers })]); setTaxes(taxResult); setDiscounts(discountResult) } catch (requestError) { setError(requestError.message) } }
+  useEffect(() => { const timer = window.setTimeout(load, 0); return () => window.clearTimeout(timer) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  async function submit(event) { event.preventDefault(); setError(''); try { const payload = { ...form, value: form.value, valid_until: form.valid_until || null, ...(kind === 'discount' ? { minimum_purchase: '0', minimum_quantity: 1 } : {}) }; await api(`/api/${kind}-rules`, { method: 'POST', headers, body: JSON.stringify(payload) }); setForm({ name: '', code: '', adjustment_type: 'percentage', value: '', valid_until: '' }); setMessage(`${kind === 'tax' ? 'Tax' : 'Discount'} rule created.`); await load() } catch (requestError) { setError(requestError.message) } }
+  const rows = [...taxes.map((row) => ({ ...row, kind: 'Tax' })), ...discounts.map((row) => ({ ...row, kind: 'Discount' }))]
+  return <main className="workspace"><Sidebar user={user} onSignOut={onSignOut} active="rules" /><section className="workspace-content ops-content"><header><div><p className="eyebrow">Commercial controls</p><h1>Taxes & discounts</h1><p className="page-subtitle">Rules are applied automatically when recurring invoices are generated.</p></div></header><Notice>{error}</Notice><Notice kind="success">{message}</Notice><div className="ops-body"><form className="quick-form rules-form" onSubmit={submit}><SmallField label="Rule type"><select value={kind} onChange={(e) => setKind(e.target.value)}><option value="tax">Tax</option><option value="discount">Discount</option></select></SmallField><SmallField label="Name"><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></SmallField><SmallField label="Code"><input required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></SmallField><SmallField label="Calculation"><select value={form.adjustment_type} onChange={(e) => setForm({ ...form, adjustment_type: e.target.value })}><option value="percentage">Percentage</option><option value="fixed">Fixed amount</option></select></SmallField><SmallField label="Value"><input required min="0" step="0.01" type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></SmallField><SmallField label="Valid until"><input type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} /></SmallField><button className="catalog-primary">Create rule</button></form><DataTable columns={[{ key: 'name', label: 'Rule', width: '1.5fr', render: (row) => <><strong>{row.name}</strong><small>{row.code}</small></> }, { key: 'kind', label: 'Type' }, { key: 'value', label: 'Value', render: (row) => row.adjustment_type === 'percentage' ? `${row.value}%` : row.value }, { key: 'valid_until', label: 'Valid until', render: (row) => formatDate(row.valid_until) }, { key: 'is_active', label: 'Status', render: (row) => row.is_active ? 'Active' : 'Archived' }]} rows={rows} empty="No tax or discount rules." /></div></section></main>
+}
+
+function GuardianWorkspace({ user, onSignOut }) {
+  const token = sessionStorage.getItem('subscript_token'); const headers = { Authorization: `Bearer ${token}` }; const [findings, setFindings] = useState([]); const [summary, setSummary] = useState(null); const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
+  const load = async () => { try { setFindings(await api('/api/guardian/findings', { headers })) } catch (requestError) { setError(requestError.message) } }
+  useEffect(() => { const timer = window.setTimeout(load, 0); return () => window.clearTimeout(timer) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  async function scan() { setBusy(true); setError(''); try { const result = await api('/api/guardian/run', { headers }); setSummary(result); await load() } catch (requestError) { setError(requestError.message) } finally { setBusy(false) } }
+  async function update(id, status) { try { await api(`/api/guardian/findings/${id}`, { method: 'PATCH', headers, body: JSON.stringify({ status }) }); await load() } catch (requestError) { setError(requestError.message) } }
+  const open = findings.filter((item) => item.status !== 'resolved')
+  return <main className="workspace"><Sidebar user={user} onSignOut={onSignOut} active="guardian" /><section className="workspace-content ops-content"><header><div><p className="eyebrow">Explainable monitoring</p><h1>Revenue Guardian</h1><p className="page-subtitle">Evidence-backed checks for billing leakage, duplicates, mismatches and renewals.</p></div><button className="catalog-primary" disabled={busy} onClick={scan}>{busy ? 'Scanning…' : 'Run Guardian scan'}</button></header><Notice>{error}</Notice><div className="guardian-summary">{['critical', 'high', 'medium', 'low'].map((severity) => <article key={severity}><span>{severity}</span><strong>{summary?.by_severity?.[severity] ?? findings.filter((item) => item.severity === severity && item.status !== 'resolved').length}</strong></article>)}</div><div className="finding-list">{open.length === 0 ? <p className="empty-state">No open findings. Run a scan to check current data.</p> : open.map((item) => <article className={`finding-card ${item.severity}`} key={item.id}><div className="finding-top"><div><span className={`status-badge ${item.severity}`}>{item.severity}</span><span className="certainty">{item.certainty}</span><h3>{item.title}</h3></div><select value={item.status} onChange={(e) => update(item.id, e.target.value)}><option value="open">Open</option><option value="acknowledged">Acknowledged</option><option value="resolved">Resolved</option></select></div><p><strong>Evidence</strong>{item.evidence}</p><p><strong>Recommended action</strong>{item.recommended_action}</p><small>{item.rule} · Detected {new Date(item.detected_at).toLocaleString()}</small></article>)}</div></section></main>
+}
+
+function DashboardWorkspace({ user, onSignOut }) {
+  const token = sessionStorage.getItem('subscript_token'); const headers = { Authorization: `Bearer ${token}` }
+  const [summary, setSummary] = useState(null); const [trend, setTrend] = useState([]); const [renewals, setRenewals] = useState([]); const [invoices, setInvoices] = useState([]); const [payments, setPayments] = useState([]); const [readiness, setReadiness] = useState(null); const [error, setError] = useState('')
+  useEffect(() => { let live = true; Promise.all([api('/api/dashboard/summary', { headers }), api('/api/dashboard/revenue-trend?months=12', { headers }), api('/api/dashboard/upcoming-renewals?days=30', { headers }), api('/api/dashboard/invoice-breakdown', { headers }), api('/api/dashboard/payment-outcomes', { headers }), api('/api/system/readiness', { headers })]).then(([a, b, c, d, e, f]) => { if (live) { setSummary(a); setTrend(b); setRenewals(c); setInvoices(d); setPayments(e); setReadiness(f) } }).catch((requestError) => { if (live) setError(requestError.message) }); return () => { live = false } }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const maximum = Math.max(...trend.map((item) => Number(item.net_revenue)), 1)
+  const metrics = summary ? [['Monthly recurring', formatMoney('USD', summary.mrr)], ['Annual recurring', formatMoney('USD', summary.arr)], ['Collected', formatMoney('USD', summary.total_collected)], ['Outstanding', formatMoney('USD', summary.total_outstanding)], ['Active customers', summary.total_active_customers], ['Overdue', `${summary.overdue_invoices_count} · ${formatMoney('USD', summary.overdue_invoices_amount)}`]] : []
+  return <main className="workspace"><Sidebar user={user} onSignOut={onSignOut} active="dashboard" /><section className="workspace-content ops-content"><header><div><p className="eyebrow">Live business reporting</p><h1>Dashboard</h1><p className="page-subtitle">Revenue, collections, renewals and operational readiness from real records.</p></div><span className="role-chip">{user?.role}</span></header><Notice>{error}</Notice><div className="metric-grid">{metrics.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div><div className="dashboard-grid"><article className="dashboard-card revenue-card"><div className="card-heading"><div><p className="eyebrow">Last 12 months</p><h2>Net revenue</h2></div></div><div className="revenue-chart">{trend.map((item) => <div className="bar-wrap" key={`${item.year}-${item.month}`}><span className="bar-value">{Number(item.net_revenue) > 0 ? Math.round(Number(item.net_revenue)) : ''}</span><i style={{ height: `${Math.max((Number(item.net_revenue) / maximum) * 100, 2)}%` }} /><small>{new Date(item.year, item.month - 1).toLocaleString('en', { month: 'short' })}</small></div>)}</div></article><article className="dashboard-card"><div className="card-heading"><div><p className="eyebrow">System readiness</p><h2>Automation & email</h2></div></div><div className="readiness-list"><span><i className={readiness?.automation?.enabled ? 'ready' : ''} />Recurring billing every {readiness?.automation?.billing_interval_minutes || '—'} min</span><span><i className={readiness?.automation?.enabled ? 'ready' : ''} />Guardian scan every {readiness?.automation?.guardian_interval_minutes || '—'} min</span><span><i className={readiness?.email?.configured ? 'ready' : 'warning'} />Email {readiness?.email?.configured ? 'configured' : 'needs SMTP credentials'}</span>{readiness?.automation?.last_error && <p>{readiness.automation.last_error}</p>}</div></article></div><div className="dashboard-grid lower"><article className="dashboard-card"><h2>Upcoming renewals</h2><div className="compact-list">{renewals.length === 0 ? <p>No renewals in the next 30 days.</p> : renewals.slice(0, 6).map((item) => <div key={item.subscription_id}><span><strong>{item.customer_name}</strong><small>{item.plan_name}</small></span><span>{formatDate(item.current_period_end)}<small>{formatMoney(item.currency, item.price)}</small></span></div>)}</div></article><article className="dashboard-card"><h2>Invoice health</h2><div className="breakdown-list">{invoices.map((item) => <div key={item.status}><span><i className={`status-dot ${item.status}`} />{item.status}</span><strong>{item.count}</strong><small>{formatMoney('USD', item.amount_due)} due</small></div>)}</div></article><article className="dashboard-card"><h2>Payment outcomes</h2><div className="breakdown-list">{payments.map((item) => <div key={item.status}><span>{item.status}</span><strong>{item.count}</strong><small>{formatMoney('USD', item.total_amount)}</small></div>)}</div></article></div></section></main>
+}
+
+function ManualDiagnosticsWorkspace({ user, onSignOut }) {
+  const token = sessionStorage.getItem('subscript_token'); const headers = { Authorization: `Bearer ${token}` }
+  const [reports, setReports] = useState([]); const [selected, setSelected] = useState(null); const [file, setFile] = useState(null); const [threshold, setThreshold] = useState(1000); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('')
+  const load = async () => { try { setReports(await api('/api/har/reports', { headers })) } catch (requestError) { setError(requestError.message) } }
+  useEffect(() => { const timer = window.setTimeout(load, 0); return () => window.clearTimeout(timer) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  async function upload(event) { event.preventDefault(); if (!file) return; setBusy(true); setError(''); setMessage(''); try { const form = new FormData(); form.append('file', file); const response = await fetch(`${API_BASE_URL}/api/har/upload?slow_threshold_ms=${threshold}`, { method: 'POST', headers, body: form }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.detail || 'HAR upload failed'); setSelected(body); setMessage('HAR file sanitized and analyzed. Raw request and response bodies were not stored.'); setFile(null); await load() } catch (requestError) { setError(requestError.message) } finally { setBusy(false) } }
+  async function openReport(id) { try { setSelected(await api(`/api/har/reports/${id}`, { headers })) } catch (requestError) { setError(requestError.message) } }
+  async function removeReport(id) { if (!window.confirm('Delete this sanitized diagnostic report?')) return; try { await api(`/api/har/reports/${id}`, { method: 'DELETE', headers }); if (selected?.report_id === id) setSelected(null); await load() } catch (requestError) { setError(requestError.message) } }
+  function downloadReport() { if (!selected) return; const lines = [`SubscriptHQ HAR Diagnostic Report`, `File: ${selected.filename}`, `Uploaded: ${selected.uploaded_at}`, `Requests: ${selected.total_requests}`, `Failed: ${selected.failed_requests}`, `Slow: ${selected.slow_requests}`, `Redactions: ${selected.total_redacted_count}`, '', 'Developer findings:', ...selected.entries.filter((entry) => entry.is_failed || entry.is_slow).map((entry) => `${entry.is_failed ? '[FAILED]' : '[SLOW]'} ${entry.method} ${entry.status} ${entry.time_ms}ms ${entry.url}`), '', selected.disclaimer]; const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/plain' })); const link = document.createElement('a'); link.href = url; link.download = `${selected.report_id}-developer-report.txt`; link.click(); URL.revokeObjectURL(url) }
+  const findings = selected?.entries?.filter((entry) => entry.is_failed || entry.is_slow) || []
+  return <main className="workspace"><Sidebar user={user} onSignOut={onSignOut} active="diagnostics" /><section className="workspace-content ops-content"><header><div><p className="eyebrow">Developer support</p><h1>HAR diagnostics</h1><p className="page-subtitle">Upload a browser network recording, remove secrets automatically, and share focused findings.</p></div></header><Notice>{error}</Notice><Notice kind="success">{message}</Notice><div className="diagnostic-layout"><div><form className="upload-card" onSubmit={upload}><span className="upload-icon">HAR</span><h2>Analyze a network recording</h2><p>In your browser’s developer tools, open Network, reproduce the issue, then export “Save all as HAR”.</p><label className="file-picker"><input type="file" accept=".har,application/json" onChange={(event) => setFile(event.target.files?.[0] || null)} /><span>{file ? file.name : 'Choose .har file'}</span></label><SmallField label="Slow request threshold (milliseconds)"><input type="number" min="100" value={threshold} onChange={(event) => setThreshold(event.target.value)} /></SmallField><button className="catalog-primary full" disabled={busy || !file}>{busy ? 'Sanitizing and analyzing…' : 'Create diagnostic report'}</button><small>Authorization headers, cookies, API keys, sensitive query values, and raw bodies are removed before storage.</small></form><div className="report-history"><h2>Report history</h2>{reports.length === 0 ? <p className="empty-state">No diagnostic reports yet.</p> : reports.map((report) => <button key={report.report_id} className={selected?.report_id === report.report_id ? 'active' : ''} onClick={() => openReport(report.report_id)}><span><strong>{report.filename}</strong><small>{new Date(report.uploaded_at).toLocaleString()}</small></span><span>{report.failed_requests} failed</span></button>)}</div></div><div className="diagnostic-report">{!selected ? <div className="report-placeholder"><span>◎</span><h2>Select or upload a report</h2><p>The sanitized request evidence will appear here.</p></div> : <><div className="report-title"><div><p className="eyebrow">Sanitized report</p><h2>{selected.filename}</h2></div><div className="row-actions"><button onClick={downloadReport}>Download developer report</button><button onClick={() => removeReport(selected.report_id)}>Delete</button></div></div><div className="report-metrics"><span><strong>{selected.total_requests}</strong>Total</span><span><strong>{selected.failed_requests}</strong>Failed</span><span><strong>{selected.slow_requests}</strong>Slow</span><span><strong>{selected.total_redacted_count}</strong>Redacted</span></div><div className="request-list">{findings.length === 0 ? <p className="empty-state">No failed or slow requests were found.</p> : findings.map((entry) => <article key={entry.id}><div><span className={`request-method ${entry.method.toLowerCase()}`}>{entry.method}</span><strong>{entry.status || 'Network error'}</strong><small>{Math.round(entry.time_ms)} ms</small></div><p>{entry.url}</p><span>{entry.is_failed ? 'Failed request' : 'Slow request'} · {entry.host}</span></article>)}</div><p className="report-disclaimer">{selected.disclaimer}</p></>}</div></div></section></main>
+}
+
+function SemiAutomaticRecorder({ onSubmitted }) {
+  const [snapshot, setSnapshot] = useState(diagnosticSnapshot()); const [consent, setConsent] = useState(false); const [captured, setCaptured] = useState(0); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('')
+  useEffect(() => { const update = () => setSnapshot(diagnosticSnapshot()); window.addEventListener('subscript-diagnostic-change', update); return () => window.removeEventListener('subscript-diagnostic-change', update) }, [])
+  useEffect(() => { if (!snapshot.active) return undefined; const elapsed = Date.now() - new Date(snapshot.startedAt).getTime(); const timer = window.setTimeout(() => { setCaptured(stopDiagnosticRecording().length); setMessage('Five-minute recording completed. Review the request count, then send it to developers.') }, Math.max(300000 - elapsed, 0)); return () => window.clearTimeout(timer) }, [snapshot.active, snapshot.startedAt])
+  function start() { if (!consent) return; setError(''); setMessage(''); setCaptured(0); beginDiagnosticRecording() }
+  function stop() { setCaptured(stopDiagnosticRecording().length); setMessage('Recording stopped. No request or response bodies were captured.') }
+  function discard() { clearDiagnosticRecording(); setCaptured(0); setConsent(false); setMessage('Diagnostic recording discarded.') }
+  async function submit() { if (!diagnosticSession.entries.length) { setError('Use the app while recording so there is at least one request to review.'); return } setBusy(true); setError(''); try { const token = sessionStorage.getItem('subscript_token'); const result = await api('/api/har/upload-json', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ filename: `subscript-session-${new Date().toISOString().replace(/[:.]/g, '-')}.har`, slow_threshold_ms: 1000, har_content: diagnosticHar() }) }); setMessage(`Sent to developers: ${result.total_requests} requests, ${result.failed_requests} failed, ${result.slow_requests} slow.`); clearDiagnosticRecording(); setCaptured(0); setConsent(false); onSubmitted() } catch (requestError) { setError(requestError.message) } finally { setBusy(false) } }
+  return <aside className={`semi-recorder ${snapshot.active ? 'recording' : ''}`} aria-label="Consent-based diagnostic recorder"><div className="recorder-title"><span className="recorder-pulse" /><div><p className="eyebrow">Semi-automatic</p><h2>{snapshot.active ? 'Recording app diagnostics' : 'Record this issue'}</h2></div></div>{!snapshot.active && captured === 0 && <><p>With your agreement, SubscriptHQ records only its own API request URLs, status codes, and timings for up to five minutes.</p><label className="consent-check"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />I agree to record this diagnostic session.</label><button className="catalog-primary full" disabled={!consent} onClick={start}>Start diagnostic recording</button></>}{snapshot.active && <><p>Reproduce the problem now. Request and response bodies are never captured.</p><div className="recording-count"><strong>{snapshot.count}</strong><span>app requests recorded</span></div><button className="stop-recording" onClick={stop}>Stop and review</button></>}{!snapshot.active && captured > 0 && <><div className="recording-count"><strong>{captured}</strong><span>requests ready to sanitize</span></div><div className="recorder-actions"><button className="catalog-primary" disabled={busy} onClick={submit}>{busy ? 'Sending…' : 'Send to developers'}</button><button onClick={discard}>Discard</button></div></>}<Notice>{error}</Notice>{message && <p className="recorder-message">{message}</p>}<small>For complete browser traffic, use the manual HAR upload on this page.</small></aside>
+}
+
+function DiagnosticsWorkspace(props) {
+  const [refreshKey, setRefreshKey] = useState(0)
+  return <><ManualDiagnosticsWorkspace key={refreshKey} {...props} /><SemiAutomaticRecorder onSubmitted={() => setRefreshKey((value) => value + 1)} /></>
+}
+
+export default function App() {
+  const [page, setPage] = useState(routes[window.location.pathname] || 'login'); const [user, setUser] = useState(null)
+  useEffect(() => { const update = () => setPage(routes[window.location.pathname] || 'login'); window.addEventListener('popstate', update); return () => window.removeEventListener('popstate', update) }, [])
+  useEffect(() => { if (!['app', 'dashboard', 'catalog', 'customers', 'quotations', 'subscriptions', 'invoices', 'rules', 'guardian', 'diagnostics'].includes(page)) return; const token = sessionStorage.getItem('subscript_token'); if (!token) { navigate('/login'); return } api('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } }).then(setUser).catch(() => { sessionStorage.removeItem('subscript_token'); navigate('/login') }) }, [page])
+  const signOut = () => { sessionStorage.removeItem('subscript_token'); setUser(null); navigate('/login') }
+  if (page === 'register') return <Register />; if (page === 'forgot') return <ForgotPassword />; if (page === 'reset') return <ResetPassword />; if (page === 'app') return <Workspace user={user} onSignOut={signOut} />; if (page === 'dashboard') return <DashboardWorkspace user={user} onSignOut={signOut} />; if (page === 'catalog') return <CatalogWorkspace user={user} onSignOut={signOut} />; if (['customers', 'quotations', 'subscriptions', 'invoices'].includes(page)) return <OperationsWorkspace user={user} onSignOut={signOut} view={page} />; if (page === 'rules') return <RulesWorkspace user={user} onSignOut={signOut} />; if (page === 'guardian') return <GuardianWorkspace user={user} onSignOut={signOut} />; if (page === 'diagnostics') return <DiagnosticsWorkspace user={user} onSignOut={signOut} />; return <Login onAuthenticated={setUser} />
+}
